@@ -33,4 +33,14 @@ describe('App — витрина и корзина', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
     expect(localStorage.getItem('cart')).toBeTruthy()
   })
+
+  it('кнопка «Купить» добавляет товар и открывает оформление', () => {
+    render(<App />)
+    const buyButtons = screen.getAllByRole('button', { name: /Купить/i })
+    fireEvent.click(buyButtons[0])
+    expect(screen.getByText(/Корзина \(1\)/)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Имя')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Телефон')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Адрес')).toBeInTheDocument()
+  })
 })

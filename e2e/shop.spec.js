@@ -27,3 +27,10 @@ test('оформление заказа', async ({ page }) => {
 
   await expect(page.getByText('Корзина (0)')).toBeVisible()
 })
+test('кнопка «Купить» открывает оформление сразу', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Купить Меч/ }).click()
+  await expect(page.getByPlaceholder('Имя')).toBeVisible()
+  await expect(page.getByPlaceholder('Телефон')).toBeVisible()
+  await expect(page.getByPlaceholder('Адрес')).toBeVisible()
+})

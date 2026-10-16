@@ -34,6 +34,12 @@ function App() {
   const total = calcTotal(cart)
   const count = calcCount(cart)
 
+  const buyNow = (id) => {
+    setCart((prev) => addItem(prev, id))
+    setShowCart(false)
+    setShowCheckout(true)
+  }
+
   const submitOrder = (e) => {
     e.preventDefault()
     try {
@@ -70,6 +76,13 @@ function App() {
               onClick={() => setCart((prev) => addItem(prev, p.id))}
             >
               В корзину
+            </button>
+            <button
+               className="buy"
+               aria-label={`Купить ${p.name}`}
+               onClick={() => buyNow(p.id)}
+            >
+               Купить
             </button>
           </div>
         ))}
