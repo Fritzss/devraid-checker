@@ -28,3 +28,13 @@ npm run preview      # предпросмотр прод-сборки
 npm test             # unit-тесты (Vitest)
 npm run test:e2e     # E2E-тесты (Playwright)
 npm run lint         # ESLint
+
+## Backend (REST API)
+
+В папке `server/` — Express + Zod + Swagger.
+
+```bash
+cd server
+npm install
+npm start        # http://localhost:3000
+npm test         # 11 тестов (Vitest + Supertest)
