@@ -84,4 +84,27 @@ describe('API', () => {
     const res = await request(app).delete('/api/products/999')
     expect(res.status).toBe(404)
   })
+
+  it('PUT /api/products/:id — 400 если id невалиден', async () => {
+    const res = await request(app)
+      .put('/api/products/abc')
+      .send({ price: 1500 })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Invalid id')
+  })
+
+  it('PUT /api/products/:id — 400 если тело невалидно', async () => {
+    const res = await request(app)
+      .put('/api/products/1')
+      .send({ price: -100 })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Validation failed')
+  })
+
+  it('DELETE /api/products/:id — 400 если id невалиден', async () => {
+    const res = await request(app).delete('/api/products/abc')
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Invalid id')
+  })
+
 })

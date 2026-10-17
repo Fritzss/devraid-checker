@@ -43,4 +43,63 @@ describe('App — витрина и корзина', () => {
     expect(screen.getByPlaceholderText('Телефон')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Адрес')).toBeInTheDocument()
   })
+
+  it('оформляет заказ (submitOrder) и очищает корзину', () => {
+    render(<App />)
+    // Добавляем товар
+    fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
+    // Открываем корзину и жмём Оформить
+    fireEvent.click(screen.getByText(/Корзина \(/))
+    fireEvent.click(screen.getByText('Оформить'))
+
+    // Заполняем форму
+    fireEvent.change(screen.getByPlaceholderText('Имя'), { target: { value: 'Иван' } })
+    fireEvent.change(screen.getByPlaceholderText('Телефон'), { target: { value: '123' } })
+    fireEvent.change(screen.getByPlaceholderText('Адрес'), { target: { value: 'Москва' } })
+
+    // Мокаем alert, чтобы тест не падал на нём
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    // Подтверждаем
+    fireEvent.click(screen.getByText('Подтвердить'))
+
+    expect(alertSpy).toHaveBeenCalledWith('Спасибо, Иван! Заказ на 1000 ₽ принят.')
+    expect(screen.getByText(/Корзина \(0\)/)).toBeInTheDocument()
+
+    alertSpy.mockRestore()
+  })
+
+  it('показывает ошибку, если не заполнены поля при оформлении', () => {
+    render(<App />)
+    fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
+    fireEvent.click(screen.getByText(/Корзина \(/))
+    fireEvent.click(screen.getByText('Оформить'))
+
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    
+    // В форме есть required, но мы вызовем submit напрямую
+    fireEvent.submit(screen.getByText('Подтвердить').closest('form'))
+    
+    // Так как required в jsdom не блокирует submit, submitOrder выбросит ошибку о пустых полях
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Не удалось оформить заказ'))
+    
+    alertSpy.mockRestore()
+  })
+
+  it('закрывает форму оформления по кнопке Отмена', () => {
+    render(<App />)
+    fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
+    fireEvent.click(screen.getByText(/Корзина \(/))
+    fireEvent.click(screen.getByText('Оформить'))
+    
+    // Форма открыта
+    expect(screen.getByPlaceholderText('Имя')).toBeInTheDocument()
+    
+    // Жмём Отмена
+    fireEvent.click(screen.getByText('Отмена'))
+    
+    // Форма закрыта
+    expect(screen.queryByPlaceholderText('Имя')).not.toBeInTheDocument()
+  })
+
 })
