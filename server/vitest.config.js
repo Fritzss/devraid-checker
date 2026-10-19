@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     pool: 'forks',
-    maxWorkers: 1,
+    fileParallelism: false,
     setupFiles: ['./tests/setup.js'],
     coverage: {
       provider: 'v8',
