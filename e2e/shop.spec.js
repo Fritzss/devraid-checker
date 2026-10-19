@@ -8,14 +8,16 @@ test('витрина рендерит товары', async ({ page }) => {
 
 test('добавление товара в корзину', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'В корзину' }).first().click()
-  await expect(page.getByText('Корзина (1)')).toBeVisible()
+  await page.getByRole('button', { name: /В корзину/i }).first().click()
+  // Проверяем текст внутри кнопки Корзина
+  await expect(page.getByRole('button', { name: 'Корзина' })).toContainText('Корзина (1)')
 })
 
 test('оформление заказа', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'В корзину' }).first().click()
-  await page.getByRole('button', { name: /Корзина \(/ }).click()
+  await page.getByRole('button', { name: /В корзину/i }).first().click()
+  
+  await page.getByRole('button', { name: 'Корзина' }).click()
   await page.getByRole('button', { name: 'Оформить' }).click()
 
   page.on('dialog', (d) => d.accept())
@@ -25,8 +27,9 @@ test('оформление заказа', async ({ page }) => {
   await page.getByPlaceholder('Адрес').fill('Москва, Кремль')
   await page.getByRole('button', { name: 'Подтвердить' }).click()
 
-  await expect(page.getByText('Корзина (0)')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Корзина' })).toContainText('Корзина (0)')
 })
+
 test('кнопка «Купить» открывает оформление сразу', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Купить Меч/ }).click()

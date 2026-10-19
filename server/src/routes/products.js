@@ -8,6 +8,12 @@ import {
 
 const router = Router()
 
+// Вспомогательная функция для обработки ошибок
+const handleError = (res, error) => {
+  console.error('Route error:', error)
+  res.status(500).json({ error: 'Internal server error' })
+}
+
 /**
  * @openapi
  * /api/products:
@@ -19,7 +25,11 @@ const router = Router()
  *         description: Массив товаров
  */
 router.get('/', (req, res) => {
-  res.json(productsRepo.getAll())
+  try {
+    res.json(productsRepo.getAll())
+  } catch (err) {
+    handleError(res, err)
+  }
 })
 
 /**
@@ -33,7 +43,11 @@ router.get('/', (req, res) => {
  *         description: Массив товаров с вложенными отзывами
  */
 router.get('/with-reviews', (req, res) => {
-  res.json(productsRepo.getAllWithReviews())
+  try {
+    res.json(productsRepo.getAllWithReviews())
+  } catch (err) {
+    handleError(res, err)
+  }
 })
 
 /**
@@ -53,15 +67,19 @@ router.get('/with-reviews', (req, res) => {
  *         description: Товар
  */
 router.get('/:id', (req, res) => {
-  const parsed = IdParamSchema.safeParse(req.params)
-  if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid id', details: parsed.error.issues })
+  try {
+    const parsed = IdParamSchema.safeParse(req.params)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid id', details: parsed.error.issues })
+    }
+    const product = productsRepo.getById(parsed.data.id)
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+    res.json(product)
+  } catch (err) {
+    handleError(res, err)
   }
-  const product = productsRepo.getById(parsed.data.id)
-  if (!product) {
-    return res.status(404).json({ error: 'Product not found' })
-  }
-  res.json(product)
 })
 
 /**
@@ -81,12 +99,16 @@ router.get('/:id', (req, res) => {
  *         description: Созданный товар
  */
 router.post('/', (req, res) => {
-  const parsed = ProductSchema.safeParse(req.body)
-  if (!parsed.success) {
-    return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues })
+  try {
+    const parsed = ProductSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues })
+    }
+    const product = productsRepo.create(parsed.data)
+    res.status(201).json(product)
+  } catch (err) {
+    handleError(res, err)
   }
-  const product = productsRepo.create(parsed.data)
-  res.status(201).json(product)
 })
 
 /**
@@ -106,19 +128,23 @@ router.post('/', (req, res) => {
  *         description: Обновлённый товар
  */
 router.put('/:id', (req, res) => {
-  const idParsed = IdParamSchema.safeParse(req.params)
-  if (!idParsed.success) {
-    return res.status(400).json({ error: 'Invalid id', details: idParsed.error.issues })
+  try {
+    const idParsed = IdParamSchema.safeParse(req.params)
+    if (!idParsed.success) {
+      return res.status(400).json({ error: 'Invalid id', details: idParsed.error.issues })
+    }
+    const bodyParsed = ProductUpdateSchema.safeParse(req.body)
+    if (!bodyParsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: bodyParsed.error.issues })
+    }
+    const updated = productsRepo.update(idParsed.data.id, bodyParsed.data)
+    if (!updated) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+    res.json(updated)
+  } catch (err) {
+    handleError(res, err)
   }
-  const bodyParsed = ProductUpdateSchema.safeParse(req.body)
-  if (!bodyParsed.success) {
-    return res.status(400).json({ error: 'Validation failed', details: bodyParsed.error.issues })
-  }
-  const updated = productsRepo.update(idParsed.data.id, bodyParsed.data)
-  if (!updated) {
-    return res.status(404).json({ error: 'Product not found' })
-  }
-  res.json(updated)
 })
 
 /**
@@ -138,15 +164,19 @@ router.put('/:id', (req, res) => {
  *         description: Удалено
  */
 router.delete('/:id', (req, res) => {
-  const parsed = IdParamSchema.safeParse(req.params)
-  if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid id', details: parsed.error.issues })
+  try {
+    const parsed = IdParamSchema.safeParse(req.params)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid id', details: parsed.error.issues })
+    }
+    const deleted = productsRepo.delete(parsed.data.id)
+    if (!deleted) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+    res.status(204).send()
+  } catch (err) {
+    handleError(res, err)
   }
-  const deleted = productsRepo.delete(parsed.data.id)
-  if (!deleted) {
-    return res.status(404).json({ error: 'Product not found' })
-  }
-  res.status(204).send()
 })
 
 export default router

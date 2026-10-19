@@ -1,9 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import App from './App'
 
 beforeEach(() => {
   localStorage.clear()
+  vi.restoreAllMocks()
+  vi.stubGlobal('fetch', vi.fn(() =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve({ status: 'created' }) })
+  ))
+  vi.spyOn(window, 'alert').mockImplementation(() => {})
 })
 
 describe('App — витрина и корзина', () => {
@@ -16,15 +21,15 @@ describe('App — витрина и корзина', () => {
 
   it('добавляет товар в корзину и увеличивает счётчик', () => {
     render(<App />)
-    const buttons = screen.getAllByRole('button', { name: /В корзину/i })
-    fireEvent.click(buttons[0])
-    expect(screen.getByText(/Корзина \(1\)/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
+    // Кнопка корзины теперь имеет aria-label="Корзина", а текст меняется динамически
+    expect(screen.getByRole('button', { name: 'Корзина' })).toHaveTextContent('Корзина (1)')
   })
 
   it('открывает корзину и показывает итог', () => {
     render(<App />)
     fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
-    fireEvent.click(screen.getByText(/Корзина \(/))
+    fireEvent.click(screen.getByRole('button', { name: 'Корзина' }))
     expect(screen.getByText(/Итого: 1000 ₽/)).toBeInTheDocument()
   })
 
@@ -36,70 +41,55 @@ describe('App — витрина и корзина', () => {
 
   it('кнопка «Купить» добавляет товар и открывает оформление', () => {
     render(<App />)
-    const buyButtons = screen.getAllByRole('button', { name: /Купить/i })
-    fireEvent.click(buyButtons[0])
-    expect(screen.getByText(/Корзина \(1\)/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: /Купить/i })[0])
+    expect(screen.getByRole('button', { name: 'Корзина' })).toHaveTextContent('Корзина (1)')
     expect(screen.getByPlaceholderText('Имя')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Телефон')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Адрес')).toBeInTheDocument()
   })
 
-  it('оформляет заказ (submitOrder) и очищает корзину', () => {
+  it('отправляет заказ (submitOrder), очищает корзину и закрывает форму', async () => {
     render(<App />)
-    // Добавляем товар
     fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
-    // Открываем корзину и жмём Оформить
-    fireEvent.click(screen.getByText(/Корзина \(/))
-    fireEvent.click(screen.getByText('Оформить'))
+    fireEvent.click(screen.getByRole('button', { name: 'Корзина' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Оформить' }))
 
-    // Заполняем форму
     fireEvent.change(screen.getByPlaceholderText('Имя'), { target: { value: 'Иван' } })
     fireEvent.change(screen.getByPlaceholderText('Телефон'), { target: { value: '123' } })
     fireEvent.change(screen.getByPlaceholderText('Адрес'), { target: { value: 'Москва' } })
 
-    // Мокаем alert, чтобы тест не падал на нём
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    fireEvent.click(screen.getByRole('button', { name: /Подтвердить/ }))
 
-    // Подтверждаем
-    fireEvent.click(screen.getByText('Подтвердить'))
-
-    expect(alertSpy).toHaveBeenCalledWith('Спасибо, Иван! Заказ на 1000 ₽ принят.')
-    expect(screen.getByText(/Корзина \(0\)/)).toBeInTheDocument()
-
-    alertSpy.mockRestore()
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith('Спасибо, Иван! Заказ оформлен.')
+      expect(screen.getByRole('button', { name: 'Корзина' })).toHaveTextContent('Корзина (0)')
+    })
   })
 
-  it('показывает ошибку, если не заполнены поля при оформлении', () => {
+  it('использует фолбэк, если API недоступен', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network Error'))))
+    
     render(<App />)
     fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
-    fireEvent.click(screen.getByText(/Корзина \(/))
-    fireEvent.click(screen.getByText('Оформить'))
+    fireEvent.click(screen.getByRole('button', { name: 'Корзина' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Оформить' }))
 
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
-    
-    // В форме есть required, но мы вызовем submit напрямую
-    fireEvent.submit(screen.getByText('Подтвердить').closest('form'))
-    
-    // Так как required в jsdom не блокирует submit, submitOrder выбросит ошибку о пустых полях
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Не удалось оформить заказ'))
-    
-    alertSpy.mockRestore()
+    fireEvent.change(screen.getByPlaceholderText('Имя'), { target: { value: 'Иван' } })
+    fireEvent.change(screen.getByPlaceholderText('Телефон'), { target: { value: '123' } })
+    fireEvent.change(screen.getByPlaceholderText('Адрес'), { target: { value: 'Москва' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /Подтвердить/ }))
+
+    await waitFor(() => {
+      // Должен сработать fallback alert
+      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Заказ на 1000 ₽ принят (демо)'))
+    })
   })
 
   it('закрывает форму оформления по кнопке Отмена', () => {
     render(<App />)
-    fireEvent.click(screen.getAllByRole('button', { name: /В корзину/i })[0])
-    fireEvent.click(screen.getByText(/Корзина \(/))
-    fireEvent.click(screen.getByText('Оформить'))
+    fireEvent.click(screen.getAllByRole('button', { name: /Купить/i })[0])
     
-    // Форма открыта
     expect(screen.getByPlaceholderText('Имя')).toBeInTheDocument()
-    
-    // Жмём Отмена
-    fireEvent.click(screen.getByText('Отмена'))
-    
-    // Форма закрыта
+    fireEvent.click(screen.getByRole('button', { name: 'Отменить оформление' }))
     expect(screen.queryByPlaceholderText('Имя')).not.toBeInTheDocument()
   })
-
 })

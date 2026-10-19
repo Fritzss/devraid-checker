@@ -8,6 +8,7 @@ import { initDb } from './db/init.js'
 import db from './db/index.js'
 import logger from './logger.js'
 import metricsClient, { httpRequestDuration, httpRequestTotal, dbStatus } from './metrics.js'
+import ordersRouter from './routes/orders.js'
 
 const swaggerSpec = swaggerJsdoc({
   definition: {
@@ -26,6 +27,28 @@ export function createApp() {
   
   app.use(cors())
   app.use(express.json())
+
+let healthCache = { data: null, timestamp: 0 }
+const HEALTH_CACHE_TTL = 5000
+
+app.get('/health', (req, res) => {
+  const now = Date.now()
+  if (healthCache.data && now - healthCache.timestamp < HEALTH_CACHE_TTL) {
+    return res.json(healthCache.data)
+  }
+  
+  try {
+    db.prepare('SELECT 1').get()
+    dbStatus.set(1)
+    const data = { status: 'ok', database: 'up' }
+    healthCache = { data, timestamp: now }
+    res.json(data)
+  } catch (error) {
+    dbStatus.set(0)
+    logger.error(error, 'Database health check failed')
+    res.status(503).json({ status: 'error', database: 'down' })
+  }
+})
 
   // Метрики времени выполнения
   app.use((req, res, next) => {
@@ -62,6 +85,7 @@ export function createApp() {
   })
 
   app.use('/api/products', productsRouter)
+  app.use('/api/orders', ordersRouter)
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
   app.get('/openapi.json', (req, res) => res.json(swaggerSpec))
 
