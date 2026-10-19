@@ -32,22 +32,30 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      VITEST_SEGFAULT_RETRY: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - name: Install frontend deps
         run: npm ci
-      - name: Rebuild native module
-        working-directory: server
-        run: npm rebuild better-sqlite3
+
       - name: Test frontend
         run: npm test
+
       - name: Install server deps
         working-directory: server
         run: npm ci
+
+      - name: Rebuild native module
+        working-directory: server
+        run: npm rebuild better-sqlite3 --build-from-source
+
       - name: Test server
         working-directory: server
         run: npm test
