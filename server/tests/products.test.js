@@ -10,10 +10,10 @@ beforeEach(() => {
 })
 
 describe('API', () => {
-  it('GET /health — возвращает ok', async () => {
+  it('GET /health — возвращает ok и статус БД', async () => {
     const res = await request(app).get('/health')
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ status: 'ok' })
+    expect(res.body).toEqual({ status: 'ok', database: 'up' })
   })
 
   it('GET /api/products — возвращает список товаров', async () => {
@@ -115,5 +115,12 @@ describe('API', () => {
     const res = await request(app).delete('/api/products/abc')
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('Invalid id')
+  })
+
+  it('GET /metrics — возвращает метрики Prometheus', async () => {
+    const res = await request(app).get('/metrics')
+    expect(res.status).toBe(200)
+    expect(res.text).toContain('devraid_http_requests_total')
+    expect(res.text).toContain('devraid_db_status')
   })
 })
