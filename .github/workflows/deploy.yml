@@ -40,6 +40,9 @@ jobs:
           cache: npm
       - name: Install frontend deps
         run: npm ci
+      - name: Rebuild native module
+        working-directory: server
+        run: npm rebuild better-sqlite3
       - name: Test frontend
         run: npm test
       - name: Install server deps

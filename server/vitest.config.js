@@ -4,6 +4,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     pool: 'forks', // Обходной путь для нативных модулей (better-sqlite3)
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     setupFiles: ['./tests/setup.js'],
     coverage: {
       provider: 'v8',
