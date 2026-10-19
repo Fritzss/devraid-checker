@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { products, getNextId } from '../data/products.js'
+import { productsRepo } from '../data/products.js'
 import {
   ProductSchema,
   ProductUpdateSchema,
@@ -17,15 +17,23 @@ const router = Router()
  *     responses:
  *       200:
  *         description: Массив товаров
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Product'
  */
 router.get('/', (req, res) => {
-  res.json(products)
+  res.json(productsRepo.getAll())
+})
+
+/**
+ * @openapi
+ * /api/products/with-reviews:
+ *   get:
+ *     summary: Список товаров с отзывами (оптимизированный запрос без N+1)
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Массив товаров с вложенными отзывами
+ */
+router.get('/with-reviews', (req, res) => {
+  res.json(productsRepo.getAllWithReviews())
 })
 
 /**
@@ -43,21 +51,13 @@ router.get('/', (req, res) => {
  *     responses:
  *       200:
  *         description: Товар
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
- *       400:
- *         description: Некорректный id
- *       404:
- *         description: Не найден
  */
 router.get('/:id', (req, res) => {
   const parsed = IdParamSchema.safeParse(req.params)
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid id', details: parsed.error.issues })
   }
-  const product = products.find((p) => p.id === parsed.data.id)
+  const product = productsRepo.getById(parsed.data.id)
   if (!product) {
     return res.status(404).json({ error: 'Product not found' })
   }
@@ -79,20 +79,13 @@ router.get('/:id', (req, res) => {
  *     responses:
  *       201:
  *         description: Созданный товар
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
- *       400:
- *         description: Ошибка валидации
  */
 router.post('/', (req, res) => {
   const parsed = ProductSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.issues })
   }
-  const product = { id: getNextId(), ...parsed.data }
-  products.push(product)
+  const product = productsRepo.create(parsed.data)
   res.status(201).json(product)
 })
 
@@ -108,19 +101,9 @@ router.post('/', (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ProductInput'
  *     responses:
  *       200:
  *         description: Обновлённый товар
- *       400:
- *         description: Ошибка валидации
- *       404:
- *         description: Не найден
  */
 router.put('/:id', (req, res) => {
   const idParsed = IdParamSchema.safeParse(req.params)
@@ -131,12 +114,11 @@ router.put('/:id', (req, res) => {
   if (!bodyParsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: bodyParsed.error.issues })
   }
-  const idx = products.findIndex((p) => p.id === idParsed.data.id)
-  if (idx === -1) {
+  const updated = productsRepo.update(idParsed.data.id, bodyParsed.data)
+  if (!updated) {
     return res.status(404).json({ error: 'Product not found' })
   }
-  products[idx] = { ...products[idx], ...bodyParsed.data }
-  res.json(products[idx])
+  res.json(updated)
 })
 
 /**
@@ -154,19 +136,16 @@ router.put('/:id', (req, res) => {
  *     responses:
  *       204:
  *         description: Удалено
- *       404:
- *         description: Не найден
  */
 router.delete('/:id', (req, res) => {
   const parsed = IdParamSchema.safeParse(req.params)
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid id', details: parsed.error.issues })
   }
-  const idx = products.findIndex((p) => p.id === parsed.data.id)
-  if (idx === -1) {
+  const deleted = productsRepo.delete(parsed.data.id)
+  if (!deleted) {
     return res.status(404).json({ error: 'Product not found' })
   }
-  products.splice(idx, 1)
   res.status(204).send()
 })
 

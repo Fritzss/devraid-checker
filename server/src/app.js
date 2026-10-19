@@ -3,6 +3,8 @@ import cors from 'cors'
 import swaggerUi from 'swagger-ui-express'
 import swaggerJsdoc from 'swagger-jsdoc'
 import productsRouter from './routes/products.js'
+import { initDb } from './db/init.js'
+
 
 const swaggerSpec = swaggerJsdoc({
   definition: {
@@ -50,6 +52,7 @@ export function createApp() {
   app.get('/openapi.json', (req, res) => res.json(swaggerSpec))
 
   app.use((req, res) => res.status(404).json({ error: 'Not found' }))
+  initDb()
 
   return app
 }

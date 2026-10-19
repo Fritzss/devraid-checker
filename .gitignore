@@ -34,3 +34,8 @@ dist-ssr
 
 # Test coverage
 coverage/
+
+# SQLite
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
