@@ -50,7 +50,7 @@ jobs:
 
       - name: Install server deps
         working-directory: server
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Rebuild native module
         working-directory: server

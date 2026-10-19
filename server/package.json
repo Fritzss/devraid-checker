@@ -7,15 +7,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test:coverage": "vitest run --coverage",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
-  "keywords": [
-    "api",
-    "express",
-    "zod",
-    "swagger"
-  ],
+  "keywords": ["api", "express", "zod", "swagger"],
   "license": "ISC",
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -26,8 +21,8 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.7",
+    "@vitest/coverage-v8": "4.1.12",
     "supertest": "^7.1.4",
-    "vitest": "^3.2.4"
+    "vitest": "4.1.12"
   }
 }
